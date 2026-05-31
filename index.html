@@ -21,10 +21,36 @@
   <!-- Background WebGL Canvas for 3D Game World -->
   <canvas id="game-canvas"></canvas>
 
-  <!-- Sound Toggle Button (Persistent UI) -->
-  <button id="sound-toggle-btn" class="icon-btn" onclick="toggleMute()">
-    <span id="sound-icon">🔊</span>
-  </button>
+  <!-- Global Currency & Sound (Persistent UI) -->
+  <div id="global-ui">
+    <div id="global-coin-display" class="coin-display">
+      <span class="coin-icon">🟡</span>
+      <span id="global-coin-val">0</span>
+    </div>
+    <button id="sound-toggle-btn" class="icon-btn" onclick="toggleAudioPanel()">
+      <span id="sound-icon">🔊</span>
+    </button>
+  </div>
+
+  <!-- Floating Audio Settings Panel -->
+  <div id="audio-settings-panel" class="cyber-panel-sub audio-panel">
+    <div class="audio-panel-header">
+      <span>AUDIO SETTINGS</span>
+      <button class="close-panel-btn" onclick="toggleAudioPanel()">×</button>
+    </div>
+    <div class="audio-control-row">
+      <label>MUSIC</label>
+      <button id="music-toggle-btn" class="toggle-btn active" onclick="toggleMusicChannel()">ON</button>
+    </div>
+    <div class="audio-control-row">
+      <label>SOUND FX</label>
+      <button id="sfx-toggle-btn" class="toggle-btn active" onclick="toggleSFXChannel()">ON</button>
+    </div>
+    <div class="audio-control-row volume-slider-row">
+      <label>VOLUME</label>
+      <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="changeMasterVolume(this.value)">
+    </div>
+  </div>
 
   <!-- SCREEN 1: Welcome Cinematic Screen -->
   <div id="welcome-screen" class="screen active">
@@ -55,10 +81,22 @@
         </div>
       </div>
       
-      <button class="cyber-btn primary-btn pulse-glow" onclick="showLevelSelection()">
-        <span class="btn-text">INITIALIZE SYSTEM</span>
-        <span class="btn-glitch"></span>
-      </button>
+      <div class="menu-action-row">
+        <button class="cyber-btn primary-btn pulse-glow" onclick="showLevelSelection()">
+          <span class="btn-text">INITIALIZE SYSTEM</span>
+          <span class="btn-glitch"></span>
+        </button>
+      </div>
+      <div class="menu-secondary-row">
+        <button class="cyber-btn icon-text-btn" onclick="showGarage()">
+          <span class="btn-icon">⚙️</span>
+          <span class="btn-text">GARAGE</span>
+        </button>
+        <button class="cyber-btn icon-text-btn" onclick="showAchievements()">
+          <span class="btn-icon">🏆</span>
+          <span class="btn-text">DATA LOGS</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -137,10 +175,97 @@
           <div class="card-glow border-red"></div>
           <div class="lock-overlay">🔒 LOCKED</div>
         </div>
+
+        <!-- Level 5 -->
+        <div class="level-card" id="card-lvl-5" onclick="selectLevel(5)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 05</span>
+            <span class="level-difficulty hard">NIGHTMARE</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">ABYSSAL ZONE</h3>
+            <p class="level-desc">Deep space darkness. Sporadic lighting and high velocity impacts.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 2.2x</span>
+            <span>TARGET: 30 ORBS</span>
+          </div>
+          <div class="card-glow border-magenta"></div>
+          <div class="lock-overlay">🔒 LOCKED</div>
+        </div>
+
+        <!-- Level 6 -->
+        <div class="level-card" id="card-lvl-6" onclick="selectLevel(6)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 06</span>
+            <span class="level-difficulty extreme">TERMINAL</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">QUANTUM FRACTURE</h3>
+            <p class="level-desc">Reality distorts. Maximum speed with unpredictable physics anomalies.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 2.5x</span>
+            <span>TARGET: 40 ORBS</span>
+          </div>
+          <div class="card-glow border-cyan"></div>
+          <div class="lock-overlay">🔒 LOCKED</div>
+        </div>
+
+        <!-- Level 7 -->
+        <div class="level-card" id="card-lvl-7" onclick="selectLevel(7)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 07</span>
+            <span class="level-difficulty extreme">GODSPEED</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">SINGULARITY</h3>
+            <p class="level-desc">The center of the galaxy. Survive the impossible.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 3.0x</span>
+            <span>TARGET: 50 ORBS</span>
+          </div>
+          <div class="card-glow border-red"></div>
+          <div class="lock-overlay">🔒 LOCKED</div>
+        </div>
       </div>
 
       <button class="cyber-btn secondary-btn" onclick="backToMenu()">
         <span class="btn-text">RETURN TO COMMS</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Garage (Shop) -->
+  <div id="garage-screen" class="screen">
+    <div class="screen-content garage-panel cyber-panel">
+      <h2 class="section-title">GARAGE</h2>
+      <div class="garage-grid" id="garage-grid">
+        <!-- Generated by JS -->
+      </div>
+      <button class="cyber-btn secondary-btn" onclick="backToMenuFromGarage()">
+        <span class="btn-text">RETURN</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Achievements & Daily -->
+  <div id="achievements-screen" class="screen">
+    <div class="screen-content logs-panel cyber-panel">
+      <h2 class="section-title">DATA LOGS</h2>
+      <div class="logs-container">
+        <div class="log-section">
+          <h3>DAILY OBJECTIVES</h3>
+          <div id="daily-challenges-list"></div>
+        </div>
+        <div class="log-section">
+          <h3>ACHIEVEMENTS</h3>
+          <div id="achievements-list"></div>
+        </div>
+      </div>
+      <button class="cyber-btn secondary-btn" onclick="backToMenuFromAchievements()">
+        <span class="btn-text">RETURN</span>
       </button>
     </div>
   </div>
@@ -159,15 +284,26 @@
           <div id="level-progress-bar" class="level-progress-fill"></div>
         </div>
       </div>
-      <div class="hud-stat-box cyber-panel-sub">
-        <span class="hud-label">HIGH SCORE</span>
-        <div class="hud-value" id="highscore-val">0</div>
+      <div class="hud-stat-group">
+        <div class="hud-stat-box mini cyber-panel-sub">
+          <span class="hud-label">COINS</span>
+          <div class="hud-value" style="color:var(--neon-orange)"><span id="hud-coin-val">0</span></div>
+        </div>
+        <div class="hud-stat-box mini cyber-panel-sub">
+          <span class="hud-label">HIGH SCORE</span>
+          <div class="hud-value" id="highscore-val">0</div>
+        </div>
       </div>
     </div>
 
     <!-- Center Message (Level up, alerts) -->
     <div id="game-message" class="game-alert-message">
       SYSTEM LOADED
+    </div>
+
+    <!-- Active Powerups HUD -->
+    <div id="powerup-hud" class="powerup-container">
+      <!-- Generated by JS -->
     </div>
 
     <!-- Bottom Bar: Speed boost and Pause -->
