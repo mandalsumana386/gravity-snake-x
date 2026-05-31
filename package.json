@@ -1,0 +1,19 @@
+{
+  "name": "gravity-snake-x",
+  "version": "1.0.0",
+  "description": "Gravity Snake X 3D Game",
+  "main": "script.js",
+  "scripts": {
+    "dev": "npx http-server -p 8080",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4"
+  }
+}

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gravity Snake X</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Library Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+
+  <!-- Background WebGL Canvas for 3D Game World -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Sound Toggle Button (Persistent UI) -->
+  <button id="sound-toggle-btn" class="icon-btn" onclick="toggleMute()">
+    <span id="sound-icon">🔊</span>
+  </button>
+
+  <!-- SCREEN 1: Welcome Cinematic Screen -->
+  <div id="welcome-screen" class="screen active">
+    <div class="screen-content cyber-panel">
+      <div class="glitch-container">
+        <h1 class="game-title" data-text="GRAVITY SNAKE X">GRAVITY SNAKE X</h1>
+        <h2 class="game-subtitle">3D ORBITAL SIMULATION</h2>
+      </div>
+      <p class="game-description">
+        Pilot the cybernetic energy collector around a rotating, shield-protected 3D Earth. Collect energy orbs, dodge orbital satellites, and avoid your own energy tail.
+      </p>
+      
+      <div class="instructions-panel">
+        <h3>CONTROLS</h3>
+        <div class="ctrl-grid">
+          <div class="ctrl-item">
+            <span class="key-cap">⬅</span> / <span class="key-cap">A</span>
+            <span class="ctrl-desc">Turn Left</span>
+          </div>
+          <div class="ctrl-item">
+            <span class="key-cap">➡</span> / <span class="key-cap">D</span>
+            <span class="ctrl-desc">Turn Right</span>
+          </div>
+          <div class="ctrl-item">
+            <span class="key-cap">Space</span> / <span class="key-cap">Shift</span>
+            <span class="ctrl-desc">Hyper Boost</span>
+          </div>
+        </div>
+      </div>
+      
+      <button class="cyber-btn primary-btn pulse-glow" onclick="showLevelSelection()">
+        <span class="btn-text">INITIALIZE SYSTEM</span>
+        <span class="btn-glitch"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Level Selection Screen -->
+  <div id="level-screen" class="screen">
+    <div class="screen-content level-panel">
+      <h2 class="section-title">SELECT SECTOR</h2>
+      <div class="level-grid">
+        <!-- Level 1 -->
+        <div class="level-card active" onclick="selectLevel(1)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 01</span>
+            <span class="level-difficulty easy">LOW RISK</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">NEO-EARTH</h3>
+            <p class="level-desc">Clean orbital path. Slow rotation. Perfect for diagnostic runs.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 1x</span>
+            <span>TARGET: 10 ORBS</span>
+          </div>
+          <div class="card-glow border-blue"></div>
+        </div>
+
+        <!-- Level 2 -->
+        <div class="level-card" id="card-lvl-2" onclick="selectLevel(2)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 02</span>
+            <span class="level-difficulty medium">MODERATE RISK</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">CYBER SHIELD</h3>
+            <p class="level-desc">Grid shields activated. Static defense cubes populate the orbit.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 1.3x</span>
+            <span>TARGET: 15 ORBS</span>
+          </div>
+          <div class="card-glow border-cyan"></div>
+          <div class="lock-overlay">🔒 LOCKED</div>
+        </div>
+
+        <!-- Level 3 -->
+        <div class="level-card" id="card-lvl-3" onclick="selectLevel(3)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 03</span>
+            <span class="level-difficulty hard">HIGH RISK</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">SPACE STORM</h3>
+            <p class="level-desc">Active orbital satellite arrays sweep across the spherical grid.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 1.6x</span>
+            <span>TARGET: 20 ORBS</span>
+          </div>
+          <div class="card-glow border-magenta"></div>
+          <div class="lock-overlay">🔒 LOCKED</div>
+        </div>
+
+        <!-- Level 4 -->
+        <div class="level-card" id="card-lvl-4" onclick="selectLevel(4)">
+          <div class="level-header">
+            <span class="level-num">SECTOR 04</span>
+            <span class="level-difficulty extreme">CRITICAL</span>
+          </div>
+          <div class="level-body">
+            <h3 class="level-name">VOLCANIC CORE</h3>
+            <p class="level-desc">Extreme thermal anomalies. Rapid speed and shifting solar magma flares.</p>
+          </div>
+          <div class="level-footer">
+            <span>SPEED: 2.0x</span>
+            <span>TARGET: 25 ORBS</span>
+          </div>
+          <div class="card-glow border-red"></div>
+          <div class="lock-overlay">🔒 LOCKED</div>
+        </div>
+      </div>
+
+      <button class="cyber-btn secondary-btn" onclick="backToMenu()">
+        <span class="btn-text">RETURN TO COMMS</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: HUD (Heads-Up Display) Overlay -->
+  <div id="hud" class="hud-container">
+    <!-- Top Bar: Scores and Info -->
+    <div class="hud-top">
+      <div class="hud-stat-box cyber-panel-sub">
+        <span class="hud-label">ENERGY ORBS</span>
+        <div class="hud-value"><span id="score-val">0</span><span class="target-val">/10</span></div>
+      </div>
+      <div class="hud-center-title">
+        <span id="level-display">SECTOR 01: NEO-EARTH</span>
+        <div class="level-progress-track">
+          <div id="level-progress-bar" class="level-progress-fill"></div>
+        </div>
+      </div>
+      <div class="hud-stat-box cyber-panel-sub">
+        <span class="hud-label">HIGH SCORE</span>
+        <div class="hud-value" id="highscore-val">0</div>
+      </div>
+    </div>
+
+    <!-- Center Message (Level up, alerts) -->
+    <div id="game-message" class="game-alert-message">
+      SYSTEM LOADED
+    </div>
+
+    <!-- Bottom Bar: Speed boost and Pause -->
+    <div class="hud-bottom">
+      <div class="boost-meter-container cyber-panel-sub">
+        <span class="hud-label">HYPER CHARGE</span>
+        <div class="meter-track">
+          <div id="boost-charge-fill" class="meter-fill"></div>
+        </div>
+      </div>
+      
+      <button class="hud-action-btn pause-btn" onclick="pauseGame()">
+        <span>PAUSE</span>
+      </button>
+    </div>
+
+    <!-- Touch Controls Overlay for Mobile Play -->
+    <div class="mobile-controls">
+      <button id="btn-steer-left" class="steer-btn left" ontouchstart="steerLeft(true)" ontouchend="steerLeft(false)">
+        <span>◀</span>
+      </button>
+      <button id="btn-mobile-boost" class="boost-btn" ontouchstart="triggerBoost(true)" ontouchend="triggerBoost(false)">
+        <span>BOOST</span>
+      </button>
+      <button id="btn-steer-right" class="steer-btn right" ontouchstart="steerRight(true)" ontouchend="steerRight(false)">
+        <span>▶</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: Pause Menu Overlay -->
+  <div id="pause-overlay" class="overlay-screen">
+    <div class="overlay-panel cyber-panel">
+      <h2 class="panel-title">SYSTEM PAUSED</h2>
+      <div class="overlay-options">
+        <button class="cyber-btn option-btn" onclick="resumeGame()">
+          <span class="btn-text">RESUME CONNECTION</span>
+        </button>
+        <button class="cyber-btn option-btn" onclick="restartLevel()">
+          <span class="btn-text">RE-INITIALIZE SECTOR</span>
+        </button>
+        <button class="cyber-btn option-btn" onclick="exitToLevels()">
+          <span class="btn-text">SECTOR MAP</span>
+        </button>
+        <button class="cyber-btn option-btn secondary" onclick="exitToMenu()">
+          <span class="btn-text">SHUTDOWN INTERFACE</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: Game Over Screen -->
+  <div id="gameover-screen" class="screen">
+    <div class="screen-content gameover-panel cyber-panel-alert">
+      <div class="alert-icon">⚠️</div>
+      <h1 id="gameover-title" class="alert-title">SYSTEM FAILURE</h1>
+      <p id="gameover-desc" class="alert-desc">
+        Holographic connection severed. Gravity Snake structural integrity compromised.
+      </p>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">ORBS SECURED</span>
+          <span class="stat-value" id="final-score">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">BEST RECORD</span>
+          <span class="stat-value" id="final-highscore">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">SECTOR REACHED</span>
+          <span class="stat-value" id="final-sector">01</span>
+        </div>
+      </div>
+
+      <div class="gameover-options">
+        <button class="cyber-btn alert-btn primary-btn" onclick="restartLevel()">
+          <span class="btn-text">REBOOT CONNECTION</span>
+        </button>
+        <button class="cyber-btn alert-btn" onclick="exitToLevels()">
+          <span class="btn-text">SECTOR MAP</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core Script -->
+  <script src="script.js"></script>
+</body>
+</html>
