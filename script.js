@@ -9,7 +9,10 @@ const LEVEL_DATA = {
   1: { name: "NEO-EARTH", speed: 1.0, target: 10, difficulty: "LOW RISK", color: 0x00d2ff, desc: "Clean orbital path. Slow rotation. Perfect for diagnostic runs." },
   2: { name: "CYBER SHIELD", speed: 1.25, target: 15, difficulty: "MODERATE RISK", color: 0x00f6ff, desc: "Grid shields activated. Static defense cubes populate the orbit." },
   3: { name: "SPACE STORM", speed: 1.5, target: 20, difficulty: "HIGH RISK", color: 0xff007f, desc: "Active orbital satellite arrays sweep across the spherical grid." },
-  4: { name: "VOLCANIC CORE", speed: 1.8, target: 25, difficulty: "CRITICAL", color: 0xff3333, desc: "Extreme thermal anomalies. Rapid speed and shifting solar magma flares." }
+  4: { name: "VOLCANIC CORE", speed: 1.8, target: 25, difficulty: "CRITICAL", color: 0xff3333, desc: "Extreme thermal anomalies. Rapid speed and shifting solar magma flares." },
+  5: { name: "ABYSSAL ZONE", speed: 2.2, target: 30, difficulty: "NIGHTMARE", color: 0xff00ff, desc: "Deep space darkness. Sporadic lighting and high velocity impacts." },
+  6: { name: "QUANTUM FRACTURE", speed: 2.5, target: 40, difficulty: "TERMINAL", color: 0x00f6ff, desc: "Reality distorts. Maximum speed with unpredictable physics anomalies." },
+  7: { name: "SINGULARITY", speed: 3.0, target: 50, difficulty: "GODSPEED", color: 0xff3333, desc: "The center of the galaxy. Survive the impossible." }
 };
 
 // --- STATE MANAGEMENT ---
@@ -17,7 +20,7 @@ let gameState = "MENU"; // MENU, LEVEL_SELECT, PLAYING, PAUSED, GAMEOVER
 let currentLevel = 1;
 let score = 0;
 let highscore = 0;
-let unlockedLevels = [1];
+let unlockedLevels = [1, 2, 3, 4, 5, 6, 7];
 let isMuted = false;
 
 // Premium Progression State
@@ -85,7 +88,7 @@ let requestID = null;
 window.addEventListener('load', () => {
   // Load High Score & unlocked levels from Local Storage
   highscore = parseInt(localStorage.getItem('snake_highscore')) || 0;
-  unlockedLevels = JSON.parse(localStorage.getItem('snake_unlocked_levels')) || [1];
+  unlockedLevels = [1, 2, 3, 4, 5, 6, 7];
   
   // Premium Progression Loading
   coins = parseInt(localStorage.getItem('snake_coins')) || 0;
@@ -781,8 +784,9 @@ function exitToLevels() {
 }
 
 function updateLockedCards() {
-  for (let lvl = 2; lvl <= 4; lvl++) {
+  for (let lvl = 2; lvl <= 7; lvl++) {
     const card = document.getElementById(`card-lvl-${lvl}`);
+    if (!card) continue;
     if (unlockedLevels.includes(lvl)) {
       card.classList.remove('locked');
       card.querySelector('.lock-overlay').style.display = 'none';
@@ -1953,7 +1957,7 @@ function triggerLevelComplete() {
   playSFX("levelup");
   
   // Determine victory or total completion
-  if (currentLevel === 4) {
+  if (currentLevel === 7) {
     soundEngine.playMusic('complete');
   } else {
     soundEngine.playMusic('victory');
@@ -1969,7 +1973,7 @@ function triggerLevelComplete() {
   
   // Unlock next Level
   const nextLvl = currentLevel + 1;
-  if (nextLvl <= 4 && !unlockedLevels.includes(nextLvl)) {
+  if (nextLvl <= 7 && !unlockedLevels.includes(nextLvl)) {
     unlockedLevels.push(nextLvl);
     localStorage.setItem('snake_unlocked_levels', JSON.stringify(unlockedLevels));
     updateLockedCards();
