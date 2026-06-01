@@ -95,6 +95,7 @@ window.addEventListener('load', () => {
   unlockedSkins = JSON.parse(localStorage.getItem('snake_unlocked_skins')) || ['classic'];
   equippedSkin = localStorage.getItem('snake_equipped_skin') || 'classic';
   achievements = JSON.parse(localStorage.getItem('snake_achievements')) || { gamesPlayed: 0, orbsCollected: 0, powerupsUsed: 0, coinsCollected: 0, claimed: [] };
+  if (!achievements.claimed) achievements.claimed = [];
   
   updateGlobalCoinDisplay();
   generateDailyChallenges();
@@ -172,6 +173,9 @@ class SpaceAudioEngine {
       level2: 'assets/audio/level2.wav',
       level3: 'assets/audio/level3.wav',
       level4: 'assets/audio/boss.wav',
+      level5: 'assets/audio/level1.wav',
+      level6: 'assets/audio/level2.wav',
+      level7: 'assets/audio/boss.wav',
       gameover: 'assets/audio/menu.wav', // falling back to smooth tune for defeat
       victory: 'assets/audio/victory.wav',
       complete: 'assets/audio/victory.wav'
@@ -602,6 +606,14 @@ function generateDailyChallenges() {
     saveDailyChallenges();
   } else {
     dailyChallenges = JSON.parse(localStorage.getItem('snake_daily_challenges')) || [];
+    if (!dailyChallenges.length || !dailyChallenges[0].hasOwnProperty('progress')) {
+      dailyChallenges = [
+        { id: 'daily_orbs', name: 'Gatherer', desc: 'Collect 30 Orbs today', target: 30, progress: 0, reward: 25, claimed: false },
+        { id: 'daily_coins', name: 'Scavenger', desc: 'Collect 10 Coins today', target: 10, progress: 0, reward: 25, claimed: false },
+        { id: 'daily_play', name: 'Pilot', desc: 'Play 3 Games today', target: 3, progress: 0, reward: 20, claimed: false }
+      ];
+      saveDailyChallenges();
+    }
   }
 }
 
@@ -1018,7 +1030,9 @@ function selectLevel(lvl) {
   if (!unlockedLevels.includes(lvl)) {
     // Play error sound/shake card
     const card = document.getElementById(`card-lvl-${lvl}`);
-    gsap.to(card, { duration: 0.1, x: -10, yoyo: true, repeat: 3 });
+    if (card) {
+      gsap.to(card, { duration: 0.1, x: -10, yoyo: true, repeat: 3 });
+    }
     return;
   }
   
