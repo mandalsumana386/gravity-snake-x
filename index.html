@@ -21,6 +21,10 @@
   <!-- Background WebGL Canvas for 3D Game World -->
   <canvas id="game-canvas"></canvas>
 
+  <!-- CRT Scanline + Vignette Overlays for Cyberpunk Aesthetic -->
+  <div id="crt-scanlines"></div>
+  <div id="vignette-overlay"></div>
+
   <!-- Global Currency & Sound (Persistent UI) -->
   <div id="global-ui">
     <div id="global-coin-display" class="coin-display">
@@ -54,7 +58,7 @@
 
   <!-- SCREEN 1: Welcome Cinematic Screen -->
   <div id="welcome-screen" class="screen active">
-    <div class="screen-content cyber-panel">
+    <div class="welcome-content">
       <div class="glitch-container">
         <h1 class="game-title" data-text="GRAVITY SNAKE X">GRAVITY SNAKE X</h1>
         <h2 class="game-subtitle">3D ORBITAL SIMULATION</h2>
@@ -87,17 +91,27 @@
           <span class="btn-glitch"></span>
         </button>
       </div>
-      <div class="menu-secondary-row">
-        <button class="cyber-btn icon-text-btn" onclick="showGarage()">
-          <span class="btn-icon">⚙️</span>
-          <span class="btn-text">GARAGE</span>
-        </button>
-        <button class="cyber-btn icon-text-btn" onclick="showAchievements()">
-          <span class="btn-icon">🏆</span>
-          <span class="btn-text">DATA LOGS</span>
-        </button>
-      </div>
     </div>
+
+    <!-- Corner buttons (SVG only) -->
+    <button id="corner-garage-btn" class="corner-btn tooltip" data-tooltip="GARAGE" onclick="showGarage()">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" fill="rgba(0, 246, 255, 0.1)"></polygon>
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+      </svg>
+    </button>
+
+    <button id="corner-logs-btn" class="corner-btn tooltip" data-tooltip="DATA LOGS" onclick="showAchievements()">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" fill="rgba(255, 0, 127, 0.1)"></polygon>
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+        <path d="M4 22h16"></path>
+        <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"></path>
+        <path d="M12 2a4 4 0 0 1 4 4v4c0 2.2-1.8 4-4 4s-4-1.8-4-4V6a4 4 0 0 1 4-4Z"></path>
+      </svg>
+    </button>
   </div>
 
   <!-- SCREEN 2: Level Selection Screen -->

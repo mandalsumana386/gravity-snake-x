@@ -1,10 +1,10 @@
 // GRAVITY SNAKE X - Core Game Engine
 
 // --- CONFIGURATION ---
-const EARTH_RADIUS = 10;
-const BASE_SPEED = 0.05;
+const EARTH_RADIUS = 16;
+const BASE_SPEED = 0.08;
 const BOOST_SPEED_MULTIPLIER = 1.7;
-const SPACING = 7; // Frames between snake body segments
+const SPACING = 5; // Frames between snake body segments
 const LEVEL_DATA = {
   1: { name: "NEO-EARTH", speed: 1.0, target: 10, difficulty: "LOW RISK", color: 0x00d2ff, desc: "Clean orbital path. Slow rotation. Perfect for diagnostic runs." },
   2: { name: "CYBER SHIELD", speed: 1.25, target: 15, difficulty: "MODERATE RISK", color: 0x00f6ff, desc: "Grid shields activated. Static defense cubes populate the orbit." },
@@ -80,9 +80,18 @@ let particles = [];
 
 // Three.js Core Variables
 let scene, camera, renderer;
-let earthMesh, atmosphereMesh, starfield;
+let earthMesh, atmosphereMesh, earthShieldMesh, earthShieldMesh2, starfield;
 let pointLight, sunLight;
 let requestID = null;
+
+// Orbital System Variables
+let orbitalRings = []; // Array of visual glowing orbit lines
+let cyberMoon = null; // The orbiting cybernetic Moon
+let cyberMoonOrbitRadius = EARTH_RADIUS * 1.75; // Orbit radius of the Moon
+let cyberMoonAngle = 0; // Current angle in orbit
+let cyberMoonSpeed = 0.005; // Speed of moon orbiting Earth
+let cyberMoonOrbitAxis = new THREE.Vector3(0.3, 1.0, 0.2).normalize(); // Tilted orbit axis
+let cyberMoonOrbitLine = null; // Visual track of the Moon
 
 // Initialize on Load
 window.addEventListener('load', () => {
@@ -127,7 +136,8 @@ window.addEventListener('load', () => {
   window.addEventListener('touchstart', handleFirstInteraction, { once: true });
   
   // Subtle entry animation
-  gsap.from("#welcome-screen .screen-content", { duration: 1.2, scale: 0.8, opacity: 0, ease: "power3.out" });
+  gsap.from("#welcome-screen .welcome-content", { duration: 1.2, scale: 0.8, opacity: 0, ease: "power3.out" });
+  gsap.from(".corner-btn", { duration: 1.0, delay: 0.4, y: 30, opacity: 0, ease: "back.out(1.7)", stagger: 0.15 });
 });
 
 function updateGlobalCoinDisplay() {
@@ -845,6 +855,9 @@ function init3D() {
   
   // Earth Planet
   createProceduralEarth();
+  
+  // Orbital System
+  createSystemOrbits();
 }
 
 function createStarfield() {
@@ -1007,6 +1020,153 @@ function createProceduralEarth() {
   });
   atmosphereMesh = new THREE.Mesh(atmosGeom, atmosMat);
   scene.add(atmosphereMesh);
+
+  // Cyber Shield Grid Outer Layer
+  const shieldGeom = new THREE.SphereGeometry(EARTH_RADIUS + 0.12, 32, 32);
+  const shieldMat = new THREE.MeshBasicMaterial({
+    color: 0x00f6ff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.08,
+    blending: THREE.AdditiveBlending
+  });
+  earthShieldMesh = new THREE.Mesh(shieldGeom, shieldMat);
+  scene.add(earthShieldMesh);
+
+  // Secondary outer atmosphere/shield layer with a geodesic grid
+  const shieldGeom2 = new THREE.IcosahedronGeometry(EARTH_RADIUS + 0.24, 2);
+  const shieldMat2 = new THREE.MeshBasicMaterial({
+    color: 0x00f6ff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.05,
+    blending: THREE.AdditiveBlending
+  });
+  earthShieldMesh2 = new THREE.Mesh(shieldGeom2, shieldMat2);
+  scene.add(earthShieldMesh2);
+}
+
+function createSystemOrbits() {
+  // 1. Create multiple visual glowing orbital rings (3 concentric tilted tracks)
+  const ringConfigs = [
+    { radius: EARTH_RADIUS * 1.45, color: 0x00d2ff, tiltX: 0.4, tiltZ: 0.2, speed: 0.0003 },
+    { radius: EARTH_RADIUS * 1.95, color: 0xff007f, tiltX: -0.5, tiltZ: -0.3, speed: -0.0002 },
+    { radius: EARTH_RADIUS * 2.45, color: 0xffaa00, tiltX: 0.2, tiltZ: 0.6, speed: 0.0004 }
+  ];
+
+  orbitalRings = [];
+
+  ringConfigs.forEach(cfg => {
+    const points = [];
+    const segments = 128;
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      points.push(new THREE.Vector3(Math.cos(theta) * cfg.radius, 0, Math.sin(theta) * cfg.radius));
+    }
+
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({
+      color: cfg.color,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending
+    });
+
+    const line = new THREE.LineLoop(geom, mat);
+    line.rotation.x = cfg.tiltX;
+    line.rotation.z = cfg.tiltZ;
+    scene.add(line);
+    
+    orbitalRings.push({ mesh: line, speed: cfg.speed });
+  });
+
+  // 2. Create the Cybernetic Moon orbiting at tilted radius
+  cyberMoonOrbitRadius = EARTH_RADIUS * 1.75;
+  cyberMoonOrbitAxis.set(0.3, 1.0, 0.2).normalize();
+
+  // Create its visual orbital ring path
+  const moonPoints = [];
+  const segments = 128;
+  for (let i = 0; i <= segments; i++) {
+    const theta = (i / segments) * Math.PI * 2;
+    moonPoints.push(new THREE.Vector3(Math.cos(theta) * cyberMoonOrbitRadius, 0, Math.sin(theta) * cyberMoonOrbitRadius));
+  }
+  const moonOrbitGeom = new THREE.BufferGeometry().setFromPoints(moonPoints);
+  const moonOrbitMat = new THREE.LineBasicMaterial({
+    color: 0x00f6ff,
+    transparent: true,
+    opacity: 0.2,
+    blending: THREE.AdditiveBlending
+  });
+  cyberMoonOrbitLine = new THREE.LineLoop(moonOrbitGeom, moonOrbitMat);
+  cyberMoonOrbitLine.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), cyberMoonOrbitAxis);
+  scene.add(cyberMoonOrbitLine);
+
+  // Cybernetic Moon visual model
+  const moonGroup = new THREE.Group();
+
+  // Core glowing core
+  const coreGeom = new THREE.SphereGeometry(0.7, 16, 16);
+  const coreMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0x00f6ff,
+    emissiveIntensity: 1.5,
+    metalness: 0.9,
+    roughness: 0.1
+  });
+  const core = new THREE.Mesh(coreGeom, coreMat);
+  moonGroup.add(core);
+
+  // Wireframe outer shell
+  const shellGeom = new THREE.IcosahedronGeometry(0.95, 1);
+  const shellMat = new THREE.MeshBasicMaterial({
+    color: 0x00f6ff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.35
+  });
+  const shell = new THREE.Mesh(shellGeom, shellMat);
+  moonGroup.add(shell);
+
+  // Cybernetic side panels
+  const panelGeom = new THREE.BoxGeometry(0.08, 0.3, 1.5);
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0x050a1a,
+    emissive: 0x00f6ff,
+    emissiveIntensity: 0.3,
+    metalness: 0.8,
+    roughness: 0.2
+  });
+  const panels = new THREE.Mesh(panelGeom, panelMat);
+  moonGroup.add(panels);
+
+  cyberMoon = moonGroup;
+  scene.add(cyberMoon);
+}
+
+function createMoonTrailParticle(position) {
+  const geom = new THREE.SphereGeometry(0.06 + Math.random() * 0.08, 6, 6);
+  const col = LEVEL_DATA[currentLevel] ? LEVEL_DATA[currentLevel].color : 0x00f6ff;
+  const mat = new THREE.MeshBasicMaterial({
+    color: col,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending
+  });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.position.copy(position);
+  scene.add(mesh);
+
+  particles.push({
+    mesh: mesh,
+    velocity: new THREE.Vector3(
+      (Math.random() - 0.5) * 0.04,
+      (Math.random() - 0.5) * 0.04,
+      (Math.random() - 0.5) * 0.04
+    ),
+    life: 0.8,
+    decay: 0.02 + Math.random() * 0.015
+  });
 }
 
 // Ray-casting algorithm to test polygon intersection
@@ -1072,6 +1232,35 @@ function initGamePlay(lvl) {
   earthMesh.material.emissive.setHex(info.color);
   atmosphereMesh.material.color.setHex(info.color);
   
+  // Recolor orbits and Moon to match Sector theme color
+  if (earthShieldMesh) {
+    earthShieldMesh.material.color.setHex(info.color);
+  }
+  if (earthShieldMesh2) {
+    earthShieldMesh2.material.color.setHex(info.color);
+  }
+  if (orbitalRings.length > 0) {
+    orbitalRings[0].mesh.material.color.setHex(info.color);
+    // Rings 1 and 2 can keep contrasting colors or match the theme color
+    if (orbitalRings[1]) orbitalRings[1].mesh.material.color.setHex(info.color);
+    if (orbitalRings[2]) orbitalRings[2].mesh.material.color.setHex(0xffaa00); // gold for contrast
+  }
+  if (cyberMoonOrbitLine) {
+    cyberMoonOrbitLine.material.color.setHex(info.color);
+  }
+  if (cyberMoon) {
+    // Recolor core emissive and shell wireframe
+    if (cyberMoon.children[0] && cyberMoon.children[0].material) {
+      cyberMoon.children[0].material.emissive.setHex(info.color);
+    }
+    if (cyberMoon.children[1] && cyberMoon.children[1].material) {
+      cyberMoon.children[1].material.color.setHex(info.color);
+    }
+    if (cyberMoon.children[2] && cyberMoon.children[2].material) {
+      cyberMoon.children[2].material.emissive.setHex(info.color);
+    }
+  }
+  
   // Position Snake Head on sphere
   headPos.set(0, 0, EARTH_RADIUS);
   dir.set(0, 0.08, 0); // Start moving North
@@ -1104,11 +1293,11 @@ function initGamePlay(lvl) {
   scene.add(pointLight);
   
   // Cinematic Camera zoom-in from space
-  camera.position.set(0, 0, 32);
+  camera.position.set(0, 0, EARTH_RADIUS * 3.2);
   const normal = headPos.clone().normalize();
   const targetCamPos = headPos.clone()
-    .addScaledVector(normal, 8)
-    .addScaledVector(dir.clone().normalize(), -6);
+    .addScaledVector(normal, 4.5)
+    .addScaledVector(dir.clone().normalize(), -3.5);
   
   gsap.to(camera.position, {
     duration: 1.5,
@@ -1135,7 +1324,7 @@ function createSnakeMesh() {
   }
   
   // Sleek polygon Diamond head
-  const headGeom = new THREE.ConeGeometry(0.55, 1.4, 4);
+  const headGeom = new THREE.ConeGeometry(0.3, 0.8, 4); // was 0.55, 1.4, 4
   headGeom.rotateX(Math.PI / 2); // align forward
   const headMat = new THREE.MeshStandardMaterial({
     color: colorHex,
@@ -1149,12 +1338,26 @@ function createSnakeMesh() {
   
   const headMesh = new THREE.Mesh(headGeom, headMat);
   headMesh.position.copy(headPos);
+  
+  if (skin.type === 'transparent') {
+    const wireGeom = headGeom.clone();
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: colorHex,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending
+    });
+    const wireMesh = new THREE.Mesh(wireGeom, wireMat);
+    headMesh.add(wireMesh);
+  }
+  
   scene.add(headMesh);
   snakeSegments.push(headMesh);
   
   // Body segments (spheres decreasing in size)
   for (let i = 1; i < snakeBodyLength; i++) {
-    const size = 0.45 * (1 - (i / (snakeBodyLength + 4)));
+    const size = 0.24 * (1 - (i / (snakeBodyLength + 4))); // was 0.45
     const segGeom = new THREE.SphereGeometry(size, 12, 12);
     const segMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
@@ -1167,6 +1370,20 @@ function createSnakeMesh() {
     });
     const segMesh = new THREE.Mesh(segGeom, segMat);
     segMesh.position.copy(headPos);
+    
+    if (skin.type === 'transparent') {
+      const wireGeom = segGeom.clone();
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.6 * (1 - i / snakeBodyLength),
+        blending: THREE.AdditiveBlending
+      });
+      const wireMesh = new THREE.Mesh(wireGeom, wireMat);
+      segMesh.add(wireMesh);
+    }
+    
     scene.add(segMesh);
     snakeSegments.push(segMesh);
   }
@@ -1186,7 +1403,7 @@ function growSnake() {
   }
   
   const i = snakeBodyLength - 1;
-  const size = 0.45 * (1 - (i / (snakeBodyLength + 4)));
+  const size = 0.24 * (1 - (i / (snakeBodyLength + 4))); // was 0.45
   
   const segGeom = new THREE.SphereGeometry(size, 12, 12);
   const segMat = new THREE.MeshStandardMaterial({
@@ -1201,6 +1418,20 @@ function growSnake() {
   
   const segMesh = new THREE.Mesh(segGeom, segMat);
   segMesh.position.copy(history[Math.max(0, history.length - 1 - i * SPACING)]);
+  
+  if (skin.type === 'transparent') {
+    const wireGeom = segGeom.clone();
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: colorHex,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.6 * (1 - i / snakeBodyLength),
+      blending: THREE.AdditiveBlending
+    });
+    const wireMesh = new THREE.Mesh(wireGeom, wireMat);
+    segMesh.add(wireMesh);
+  }
+  
   scene.add(segMesh);
   snakeSegments.push(segMesh);
   
@@ -1209,6 +1440,11 @@ function growSnake() {
     const sizeScale = 1 - (idx / (snakeSegments.length + 4));
     snakeSegments[idx].scale.set(sizeScale, sizeScale, sizeScale);
     snakeSegments[idx].material.emissiveIntensity = (skin.type === 'emissive' ? 0.8 : 0.45) * (1 - idx / snakeSegments.length);
+    
+    // Also adjust wireframe outline opacity if transparent/ghost skin
+    if (skin.type === 'transparent' && snakeSegments[idx].children && snakeSegments[idx].children[0]) {
+      snakeSegments[idx].children[0].material.opacity = 0.6 * (1 - idx / snakeSegments.length);
+    }
   }
 }
 
@@ -1345,7 +1581,7 @@ function buildObstacles(lvl) {
 }
 
 function getValidSpawnPos() {
-  let spawnPos = getRandomPointOnSphere(EARTH_RADIUS + 0.35);
+  let spawnPos = getRandomPointOnSphere(EARTH_RADIUS + 0.3); // was + 0.35
   let valid = false;
   let attempts = 0;
   while (!valid && attempts < 50) {
@@ -1362,7 +1598,7 @@ function getValidSpawnPos() {
       }
     }
     if (!valid) {
-      spawnPos = getRandomPointOnSphere(EARTH_RADIUS + 0.35);
+      spawnPos = getRandomPointOnSphere(EARTH_RADIUS + 0.3); // was + 0.35
       attempts++;
     }
   }
@@ -1378,9 +1614,14 @@ function spawnFood() {
   
   foodPos.copy(spawnPos);
   
-  // Create Futuristic Energy Orb Model
+  // Create Futuristic Energy Orb Model with layered visuals
   const colorHex = LEVEL_DATA[currentLevel].color;
-  const orbGeom = new THREE.IcosahedronGeometry(0.38, 1);
+  
+  // Main orb group
+  const orbGroup = new THREE.Group();
+  
+  // Core solid orb
+  const orbGeom = new THREE.IcosahedronGeometry(0.24, 1); // was 0.38
   const orbMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     emissive: colorHex,
@@ -1388,22 +1629,57 @@ function spawnFood() {
     roughness: 0.1,
     metalness: 0.9
   });
-  foodMesh = new THREE.Mesh(orbGeom, orbMat);
-  foodMesh.position.copy(foodPos);
-  scene.add(foodMesh);
+  const core = new THREE.Mesh(orbGeom, orbMat);
+  orbGroup.add(core);
   
-  // Outer glowing sensor ring
-  const ringGeom = new THREE.RingGeometry(0.65, 0.73, 16);
+  // Wireframe overlay shell
+  const wireGeom = new THREE.IcosahedronGeometry(0.32, 1); // was 0.48
+  const wireMat = new THREE.MeshBasicMaterial({
+    color: colorHex,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.35,
+    blending: THREE.AdditiveBlending
+  });
+  const wireShell = new THREE.Mesh(wireGeom, wireMat);
+  orbGroup.add(wireShell);
+  
+  orbGroup.position.copy(foodPos);
+  scene.add(orbGroup);
+  foodMesh = orbGroup;
+  
+  // Outer glowing sensor ring group (two rings for premium feel)
+  const ringGroup = new THREE.Group();
+  
+  // Primary outer ring
+  const ringGeom = new THREE.RingGeometry(0.42, 0.48, 16); // was 0.65, 0.73
   const ringMat = new THREE.MeshBasicMaterial({
     color: colorHex,
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 0.7
   });
-  foodOuterRing = new THREE.Mesh(ringGeom, ringMat);
-  foodOuterRing.position.copy(foodPos);
-  foodOuterRing.lookAt(0, 0, 0); // Lie flat relative to sphere center
-  scene.add(foodOuterRing);
+  const outerRing = new THREE.Mesh(ringGeom, ringMat);
+  ringGroup.add(outerRing);
+  
+  // Secondary inner counter-rotating ring (tilted)
+  const innerRingGeom = new THREE.RingGeometry(0.32, 0.36, 12); // was 0.50, 0.55
+  const innerRingMat = new THREE.MeshBasicMaterial({
+    color: colorHex,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.4,
+    blending: THREE.AdditiveBlending
+  });
+  const innerRing = new THREE.Mesh(innerRingGeom, innerRingMat);
+  innerRing.rotation.x = Math.PI * 0.45;
+  innerRing.rotation.y = Math.PI * 0.25;
+  ringGroup.add(innerRing);
+  
+  ringGroup.position.copy(foodPos);
+  ringGroup.lookAt(0, 0, 0);
+  scene.add(ringGroup);
+  foodOuterRing = ringGroup;
 }
 
 function getRandomPointOnSphere(radius) {
@@ -1425,7 +1701,7 @@ function spawnCoin() {
   let spawnPos = getValidSpawnPos();
   coinPos.copy(spawnPos);
   
-  const coinGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.08, 16);
+  const coinGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.06, 16); // was 0.3, 0.3, 0.08
   coinGeom.rotateX(Math.PI / 2);
   const coinMat = new THREE.MeshStandardMaterial({
     color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0.8, metalness: 1.0, roughness: 0.1
@@ -1434,7 +1710,7 @@ function spawnCoin() {
   coinMesh.position.copy(coinPos);
   scene.add(coinMesh);
   
-  const ringGeom = new THREE.RingGeometry(0.5, 0.55, 12);
+  const ringGeom = new THREE.RingGeometry(0.32, 0.36, 12); // was 0.5, 0.55
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
   coinOuterRing = new THREE.Mesh(ringGeom, ringMat);
   coinOuterRing.position.copy(coinPos);
@@ -1457,7 +1733,8 @@ function spawnPowerup() {
   if (powerupType === 'magnet') col = 0x9d00ff;
   if (powerupType === 'score') col = 0xffaa00;
   
-  const geom = new THREE.OctahedronGeometry(0.4, 0);
+  // Core octahedron
+  const geom = new THREE.OctahedronGeometry(0.26, 0); // was 0.4
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff, emissive: col, emissiveIntensity: 1.2, metalness: 0.8, roughness: 0.2
   });
@@ -1465,12 +1742,29 @@ function spawnPowerup() {
   powerupMesh.position.copy(powerupPos);
   scene.add(powerupMesh);
   
-  const ringGeom = new THREE.RingGeometry(0.6, 0.68, 8);
-  const ringMat = new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-  powerupOuterRing = new THREE.Mesh(ringGeom, ringMat);
-  powerupOuterRing.position.copy(powerupPos);
-  powerupOuterRing.lookAt(0, 0, 0);
-  scene.add(powerupOuterRing);
+  // Dual gyroscope ring group
+  const gyroGroup = new THREE.Group();
+  
+  // Horizontal ring
+  const ring1Geom = new THREE.RingGeometry(0.4, 0.46, 8); // was 0.6, 0.68
+  const ring1Mat = new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+  const ring1 = new THREE.Mesh(ring1Geom, ring1Mat);
+  gyroGroup.add(ring1);
+  
+  // Vertical perpendicular ring
+  const ring2Geom = new THREE.RingGeometry(0.36, 0.41, 8); // was 0.55, 0.62
+  const ring2Mat = new THREE.MeshBasicMaterial({
+    color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending
+  });
+  const ring2 = new THREE.Mesh(ring2Geom, ring2Mat);
+  ring2.rotation.x = Math.PI / 2;
+  gyroGroup.add(ring2);
+  
+  gyroGroup.position.copy(powerupPos);
+  gyroGroup.lookAt(0, 0, 0);
+  scene.add(gyroGroup);
+  powerupOuterRing = gyroGroup;
 }
 
 // --- INTERACTIVE CONTROLS ---
@@ -1573,8 +1867,8 @@ function updateSnake() {
   
   // Calculate head rotation to lie flat on sphere looking forward
   const forward = dir.clone().normalize();
-  const right = new THREE.Vector3().crossVectors(forward, normal).normalize();
-  const correctedForward = new THREE.Vector3().crossVectors(normal, right).normalize();
+  const right = new THREE.Vector3().crossVectors(normal, forward).normalize();
+  const correctedForward = new THREE.Vector3().crossVectors(right, normal).normalize();
   
   const rotationMatrix = new THREE.Matrix4();
   rotationMatrix.set(
@@ -1596,12 +1890,12 @@ function updateSnake() {
   }
   
   // 5. Update Head Point Light position
-  pointLight.position.copy(headPos).addScaledVector(normal, 0.8);
+  pointLight.position.copy(headPos).addScaledVector(normal, 0.5); // was 0.8
   
   // 6. Check Self Collision
   // Ignore first few segments close to head
   for (let i = 5; i < snakeSegments.length; i++) {
-    if (headPos.distanceTo(snakeSegments[i].position) < 0.62) {
+    if (headPos.distanceTo(snakeSegments[i].position) < 0.38) { // was 0.62
       if (activePowerups.shield) {
         breakShield();
         return;
@@ -1630,12 +1924,12 @@ function updateSnake() {
     if (foodPos && headPos.distanceTo(foodPos) < 4.0) {
       const pullDir = headPos.clone().sub(foodPos).normalize();
       foodPos.addScaledVector(pullDir, 0.2);
-      foodPos.setLength(EARTH_RADIUS + 0.35);
+      foodPos.setLength(EARTH_RADIUS + 0.3); // was 0.35
     }
     if (coinMesh && coinPos && headPos.distanceTo(coinPos) < 4.0) {
       const pullDir = headPos.clone().sub(coinPos).normalize();
       coinPos.addScaledVector(pullDir, 0.2);
-      coinPos.setLength(EARTH_RADIUS + 0.35);
+      coinPos.setLength(EARTH_RADIUS + 0.3); // was 0.35
     }
   }
   
@@ -1646,9 +1940,9 @@ function updateSnake() {
   }
   
   // 8. Check Food collision
-  if (foodMesh && headPos.distanceTo(foodPos) < 0.95) eatFood();
-  if (coinMesh && headPos.distanceTo(coinPos) < 0.95) eatCoin();
-  if (powerupMesh && headPos.distanceTo(powerupPos) < 0.95) eatPowerup();
+  if (foodMesh && headPos.distanceTo(foodPos) < 0.75) eatFood(); // was 0.95
+  if (coinMesh && headPos.distanceTo(coinPos) < 0.75) eatCoin(); // was 0.95
+  if (powerupMesh && headPos.distanceTo(powerupPos) < 0.75) eatPowerup(); // was 0.95
 }
 
 function breakShield() {
@@ -1850,9 +2144,9 @@ function updateCamera() {
   
   const normal = headPos.clone().normalize();
   
-  // Position camera relative to snake head: 7 units above surface normal, and 6 units behind direction heading
-  const heightOffset = 6.8;
-  const behindOffset = 5.2;
+  // Position camera relative to snake head: 4.5 units above surface normal, and 3.5 units behind direction heading
+  const heightOffset = 4.5; // was 6.8
+  const behindOffset = 3.5; // was 5.2
   
   const targetCamPos = headPos.clone()
     .addScaledVector(normal, heightOffset)
@@ -1873,18 +2167,52 @@ function updateCamera() {
 function animate(timestamp) {
   requestID = requestAnimationFrame(animate);
   
+  // Update orbital system (always run, in menus and in play)
+  if (orbitalRings && orbitalRings.length > 0) {
+    orbitalRings.forEach(ring => {
+      ring.mesh.rotation.y += ring.speed;
+    });
+  }
+  if (cyberMoon) {
+    cyberMoonAngle += cyberMoonSpeed;
+    const u = new THREE.Vector3(1, 0, 0).projectOnPlane(cyberMoonOrbitAxis).normalize();
+    const v = new THREE.Vector3().crossVectors(cyberMoonOrbitAxis, u).normalize();
+    const x = Math.cos(cyberMoonAngle) * cyberMoonOrbitRadius;
+    const y = Math.sin(cyberMoonAngle) * cyberMoonOrbitRadius;
+    const newPos = new THREE.Vector3().addScaledVector(u, x).addScaledVector(v, y);
+    cyberMoon.position.copy(newPos);
+    
+    cyberMoon.rotation.y += 0.015;
+    cyberMoon.rotation.x += 0.005;
+    
+    if (Math.random() < 0.2) {
+      createMoonTrailParticle(newPos);
+    }
+  }
+  
+  // Particles are always updated so trails disappear in menus
+  updateParticles();
+  
   // 1. Slow Rotate starfield and Earth in menus
   if (gameState === "MENU" || gameState === "LEVEL_SELECT") {
     starfield.rotation.y += 0.0004;
     starfield.rotation.x += 0.0001;
     
     earthMesh.rotation.y += 0.0016;
+    if (earthShieldMesh) {
+      earthShieldMesh.rotation.y -= 0.0024;
+      earthShieldMesh.rotation.x += 0.0006;
+    }
+    if (earthShieldMesh2) {
+      earthShieldMesh2.rotation.y += 0.0036;
+      earthShieldMesh2.rotation.z -= 0.0012;
+    }
     
     // Simple cinematic camera orbit in menus
     const time = timestamp * 0.0002;
-    camera.position.x = 28 * Math.cos(time);
-    camera.position.z = 28 * Math.sin(time);
-    camera.position.y = 8 * Math.sin(time * 0.5);
+    camera.position.x = 48 * Math.cos(time); // was 28
+    camera.position.z = 48 * Math.sin(time); // was 28
+    camera.position.y = 15 * Math.sin(time * 0.5); // was 8
     camera.lookAt(0, 0, 0);
   }
   
@@ -1903,23 +2231,70 @@ function animate(timestamp) {
     
     // Slow planetary spin under the snake
     earthMesh.rotation.y += 0.0008;
+    if (earthShieldMesh) {
+      earthShieldMesh.rotation.y -= 0.0012;
+      earthShieldMesh.rotation.x += 0.0003;
+    }
+    if (earthShieldMesh2) {
+      earthShieldMesh2.rotation.y += 0.0018;
+      earthShieldMesh2.rotation.z -= 0.0006;
+    }
     
     // Twinkle background stars
     starfield.rotation.y += 0.0002;
     
     updateSnake();
+    
+    // Skin custom effects in rendering loop
+    if (snakeSegments && snakeSegments.length > 0) {
+      const skin = SKIN_DATA[equippedSkin];
+      if (skin && skin.type === 'emissive') {
+        const pulse = 1.0 + Math.sin(timestamp * 0.006) * 0.45; // pulses emissive intensity
+        // head segment
+        if (snakeSegments[0] && snakeSegments[0].material) {
+          snakeSegments[0].material.emissiveIntensity = 1.5 * pulse;
+        }
+        // body segments
+        for (let idx = 1; idx < snakeSegments.length; idx++) {
+          if (snakeSegments[idx] && snakeSegments[idx].material) {
+            const baseIntensity = 0.8 * (1 - idx / snakeSegments.length);
+            snakeSegments[idx].material.emissiveIntensity = baseIntensity * pulse;
+          }
+        }
+      }
+    }
+    
     updateObstacles();
-    updateParticles();
     
     // Rotate food ring and hover orb
     if (foodMesh && foodOuterRing) {
+      // Outer ring group spins
       foodOuterRing.rotation.z += 0.02;
+      // Counter-rotate inner ring child if it exists
+      if (foodOuterRing.children && foodOuterRing.children[1]) {
+        foodOuterRing.children[1].rotation.z -= 0.04;
+      }
       
       const hover = Math.sin(timestamp * 0.004) * 0.08;
       const normal = foodPos.clone().normalize();
       foodMesh.position.copy(foodPos).addScaledVector(normal, hover);
       foodMesh.rotation.y += 0.015;
       foodMesh.rotation.x += 0.01;
+    }
+    
+    // Animate powerup gyroscope rings
+    if (powerupMesh && powerupOuterRing) {
+      powerupMesh.rotation.y += 0.03;
+      powerupMesh.rotation.x += 0.02;
+      powerupOuterRing.rotation.z += 0.015;
+      if (powerupOuterRing.children && powerupOuterRing.children[1]) {
+        powerupOuterRing.children[1].rotation.z -= 0.025;
+      }
+    }
+    
+    // Animate coin spin
+    if (coinMesh) {
+      coinMesh.rotation.y += 0.04;
     }
     
     updateCamera();
@@ -1999,7 +2374,7 @@ function triggerLevelComplete() {
     duration: 2.2,
     x: 0,
     y: 0,
-    z: 60,
+    z: 96, // was 60
     ease: "power2.inOut",
     onComplete: () => {
       camera.fov = 55;
